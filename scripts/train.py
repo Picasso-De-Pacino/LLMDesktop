@@ -42,10 +42,9 @@ save_interval = 500
 print("📡 Initializing internet data stream...")
 stream = get_internet_data_stream()
 
-# To keep the "brain" consistent across sessions, we use a fixed character set
-# so the character 'a' is always index 5, etc.
-sample_data = next(stream)
-tokenizer = CharacterTokenizer(sample_data['text'])
+# Use a fixed string so the 'dictionary' never changes between sessions
+all_chars = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+tokenizer = CharacterTokenizer(all_chars) 
 vocab_size = tokenizer.vocab_size
 
 # --- 4. MODEL INITIALIZATION ---
