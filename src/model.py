@@ -74,7 +74,6 @@ class BigramLanguageModel(nn.Module):
         self.block_size = block_size
         self.token_embedding_table = nn.Embedding(vocab_size, n_embd)
         self.position_embedding_table = nn.Embedding(block_size, n_embd)
-        # Now 'Block' is defined above, so this line will no longer be yellow!
         self.blocks = nn.Sequential(*[Block(n_embd, n_head=n_head, block_size=block_size, dropout=dropout) for _ in range(n_layer)])
         self.ln_f = nn.LayerNorm(n_embd)
         self.lm_head = nn.Linear(n_embd, vocab_size)
@@ -96,3 +95,26 @@ class BigramLanguageModel(nn.Module):
             loss = F.cross_entropy(logits, targets)
 
         return logits, loss
+
+    def generate(self, idx, max_new_tokens):
+        # idx is (B, T) array of indices in the current context
+        for _ in range(max_new_tokens):
+            # CROP: The model can only 'see' up to block_size tokens at a time
+            # We take the last [block_size] tokens from the current sequence
+            idx_cond = idx[:, -self.block_size:]
+            
+            # Get predictions (only use the logits, ignore the loss)
+            logits, _ = self(idx_cond)
+            
+            # Focus only on the last time step (the most recent prediction)
+            logits = logits[:, -1, :] # becomes (B, C)
+            
+            # Convert to probabilities
+            probs = torch.softmax(logits, dim=-1) # (B, C)
+            
+            # Sample from the distribution (rolling the dice)
+            idx_next = torch.multinomial(probs, num_samples=1) # (B, 1)
+            
+            # Append to the running sequence
+            idx = torch.cat((idx, idx_next), dim=1) # (B, T+1)
+        return idx
