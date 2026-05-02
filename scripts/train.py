@@ -1,10 +1,16 @@
+import sys
+import os
 import torch
 import random
-import os
-import sys
+
+# This adds the project root to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Now we can safely import from src
 from src.model import BigramLanguageModel
 from src.tokenizer import CharacterTokenizer
 from src.data_loader import get_internet_data_stream, get_streaming_batch
+
 
 # --- 1. HARDWARE DETECTION ---
 device = None
