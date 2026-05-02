@@ -1,0 +1,5 @@
+torch
+datasets
+zstandard
+# For TPU support (usually installed via a specific wheel on Colab/GCP)
+# torch_xla
