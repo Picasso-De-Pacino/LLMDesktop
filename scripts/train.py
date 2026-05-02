@@ -57,8 +57,11 @@ model = BigramLanguageModel(
 ).to(device)
 
 # --- 🧠 RESUME LOGIC ---
-checkpoint_path = 'checkpoints/best_model/model.pt'
-os.makedirs('checkpoints/best_model', exist_ok=True)
+# Create the directory first, then define the path
+checkpoint_dir = 'checkpoints'
+os.makedirs(checkpoint_dir, exist_ok=True)
+
+checkpoint_path = os.path.join(checkpoint_dir, 'model.pt')
 
 if os.path.exists(checkpoint_path):
     print(f"📂 Found existing brain at {checkpoint_path}. Loading weights...")
