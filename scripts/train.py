@@ -1,6 +1,7 @@
 import torch
 import random
 import os
+import sys
 from src.model import BigramLanguageModel
 from src.tokenizer import CharacterTokenizer
 from src.data_loader import get_internet_data_stream, get_streaming_batch
@@ -23,8 +24,8 @@ except ImportError:
         print("💻 Hardware Found: CPU")
 
 # --- 2. HYPERPARAMETERS ---
-# Balanced for 8GB RAM and GTX 860M
-batch_size = 16 
+# We use larger numbers for Cloud/TPU runs
+batch_size = 64 if is_tpu else 16 
 block_size = 128 
 max_iters = 5000
 learning_rate = 1e-3
@@ -35,8 +36,8 @@ save_interval = 500
 print("📡 Initializing internet data stream...")
 stream = get_internet_data_stream()
 
-# Grab a small sample to build the initial vocabulary
-# In a real scenario, you'd use a pre-built vocab file for consistency
+# To keep the "brain" consistent across sessions, we use a fixed character set
+# so the character 'a' is always index 5, etc.
 sample_data = next(stream)
 tokenizer = CharacterTokenizer(sample_data['text'])
 vocab_size = tokenizer.vocab_size
@@ -50,14 +51,28 @@ model = BigramLanguageModel(
     block_size=block_size
 ).to(device)
 
-optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-
-# Ensure checkpoint directories exist
+# --- 🧠 RESUME LOGIC ---
+checkpoint_path = 'checkpoints/best_model/model.pt'
 os.makedirs('checkpoints/best_model', exist_ok=True)
+
+if os.path.exists(checkpoint_path):
+    print(f"📂 Found existing brain at {checkpoint_path}. Loading weights...")
+    try:
+        # We load to 'cpu' first then move to device to avoid TPU/GPU mismatch errors
+        state_dict = torch.load(checkpoint_path, map_location='cpu')
+        model.load_state_dict(state_dict)
+        print("✅ Resume successful. Continuing training...")
+    except Exception as e:
+        print(f"⚠️ Could not load checkpoint: {e}. Starting fresh.")
+else:
+    print("🌱 No existing brain found. Starting from scratch.")
+
+optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 # --- 5. TRAINING LOOP ---
 print(f"🔥 Starting training on {vocab_size} unique characters...")
 
+model.train() # Ensure model is in training mode
 for iter in range(max_iters):
     
     # Get a batch of data from the internet
@@ -83,9 +98,9 @@ for iter in range(max_iters):
 
     # Periodic Saving
     if iter % save_interval == 0 and iter > 0:
-        torch.save(model.state_dict(), 'checkpoints/best_model/model.pt')
+        torch.save(model.state_dict(), checkpoint_path)
         print(f"💾 Checkpoint saved at step {iter}")
 
 # --- 6. FINAL SAVE ---
-torch.save(model.state_dict(), 'checkpoints/best_model/model.pt')
-print("✅ Training complete. Model saved to checkpoints/best_model/model.pt")
+torch.save(model.state_dict(), checkpoint_path)
+print(f"✅ Training complete. Model saved to {checkpoint_path}")
