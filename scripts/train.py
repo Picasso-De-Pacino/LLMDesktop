@@ -76,7 +76,7 @@ else:
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 # --- 5. TRAINING LOOP ---
-print(f"🔥 Starting training 2B parameter model on {vocab_size} unique characters...")
+print(f"🔥 Starting training 1B parameter model on {vocab_size} unique characters...")
 
 model.train() 
 for iter in range(max_iters):
