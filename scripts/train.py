@@ -29,14 +29,14 @@ except ImportError:
         device = torch.device("cpu")
         print("💻 Hardware Found: CPU")
 
-# --- 2. HYPERPARAMETERS (SCALED FOR 2B) ---
-# For a 2B model on a TPU v2-8, we must keep batch_size small per core
-batch_size = 4 if is_tpu else 1 
-block_size = 1024       # Increased context for a 2B model
-max_iters = 10000       # 2B models need many more steps to converge
-learning_rate = 3e-4    # Lowered learning rate for stability at large scale
-eval_interval = 50
-save_interval = 250
+# --- 2. HYPERPARAMETERS (SCALED FOR TPU STABILITY) ---
+# We use a very small batch size to prioritize model depth over breadth
+batch_size = 2 if is_tpu else 1 
+block_size = 512        # Reduced context to save activation memory
+max_iters = 10000       
+learning_rate = 5e-4    # Slightly higher for a smaller model
+eval_interval = 100
+save_interval = 500
 
 # --- 3. DATA & TOKENIZER SETUP ---
 print("📡 Initializing internet data stream...")
@@ -46,13 +46,13 @@ all_chars = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`
 tokenizer = CharacterTokenizer(all_chars) 
 vocab_size = tokenizer.vocab_size
 
-# --- 4. MODEL INITIALIZATION (2 BILLION PARAMETERS) ---
-# n_embd=2048, n_head=16, n_layer=24 creates ~2.1B parameters
+# --- 4. MODEL INITIALIZATION (BALANCED FOR 8GB TPU) ---
+# n_embd=1024, n_head=16, n_layer=12 fits comfortably in 8GB HBM
 model = BigramLanguageModel(
     vocab_size=vocab_size, 
-    n_embd=2048, 
+    n_embd=1024, 
     n_head=16, 
-    n_layer=24, 
+    n_layer=12, 
     block_size=block_size
 ).to(device)
 
